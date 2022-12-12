@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 
 import 'package:sqflite/sqflite.dart';
+import 'package:supermarket_storage_interface/attribute.dart';
 
 import 'others/app_themes.dart';
 
@@ -15,10 +16,7 @@ class Main {
 
   static AppTheme appTheme = AppTheme();
 
-  static List<String> tables = [
-    "Employee",
-    "Office",
-  ];
+  static late Map<String, List<AttributeForm>> tables;
 
   static List<String> ops = [
     "Insert",
@@ -32,6 +30,70 @@ class Main {
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  Main.tables = { // table into their attributes
+    "Employee": [
+      AttributeForm(name: "employeeID", type: "CHAR", size1: 10, isPK: true),
+      AttributeForm(name: "firstName", type: "VARCHAR", size1: 20, canBeNull: false),
+      AttributeForm(name: "lastName", type: "VARCHAR", size1: 20, canBeNull: false),
+      AttributeForm(name: "jobTitle", type: "VARCHAR", size1: 20, canBeNull: false),
+      AttributeForm(name: "email", type: "VARCHAR", size1: 25),
+      AttributeForm(name: "managerID", type: "CHAR", size1: 10, tableFK: "Employee", nameFK: "employeeID"),
+      AttributeForm(name: "phoneNumber", type: "CHAR", size1: 11, canBeNull: false),
+      AttributeForm(name: "startDate", type: "DATE", canBeNull: false),
+      AttributeForm(name: "employeeOffice", type: "CHAR", size1: 3, tableFK: "Office", nameFK: "officeNumber"),
+    ],
+    "Office": [
+      AttributeForm(name: "officeNumber", type: "CHAR", size1: 3, isPK: true),
+      AttributeForm(name: "officePhone", type: "CHAR", size1: 11),
+      AttributeForm(name: "officeManager", type: "CHAR", size1: 10, tableFK: "Employee", nameFK: "employeeID"),
+    ],
+    "Department": [
+      AttributeForm(name: "depID", type: "CHAR", size1: 5, isPK: true),
+      AttributeForm(name: "depName", type: "VARCHAR", size1: 20, canBeNull: false),
+    ],
+    "Customer": [
+      AttributeForm(name: "customerID", type: "CHAR", size1: 10, isPK: true),
+      AttributeForm(name: "city", type: "VARCHAR", size1: 15),
+      AttributeForm(name: "addressLine1", type: "VARCHAR", size1: 30),
+      AttributeForm(name: "addressLine2", type: "VARCHAR", size1: 30),
+      AttributeForm(name: "customerName", type: "VARCHAR", size1: 25, canBeNull: false),
+      AttributeForm(name: "phoneNumber", type: "CHAR", size1: 11, canBeNull: false),
+      AttributeForm(name: "state", type: "VARCHAR", size1: 15),
+      AttributeForm(name: "postalCode", type: "INTEGER", canBeNull: false),
+      AttributeForm(name: "employeeID", type: "CHAR", size1: 10, tableFK: "Employee", nameFK: "employeeID"),
+    ],
+    "Orders": [
+      AttributeForm(name: "orderTime", type: "TIMESTAMP", canBeNull: false),
+      AttributeForm(name: "orderNumber", type: "CHAR", size1: 20, isPK: true),
+      AttributeForm(name: "paymentMethod", type: "VARCHAR", size1: 15),
+      AttributeForm(name: "total", type: "NUMERIC", size1: 10, size2: 2, canBeNull: false), // length of 10 with 2 decimals
+      AttributeForm(name: "customerID", type: "CHAR", size1: 10, tableFK: "Orders", nameFK: "customerID"),
+    ],
+    "OrderDetail": [
+      AttributeForm(name: "orderNumber", type: "CHAR", size1: 20, tableFK: "Orders", nameFK: "orderNumber"),
+      AttributeForm(name: "productCode", type: "CHAR", size1: 20, tableFK: "Products", nameFK: "productCode"),
+      AttributeForm(name: "quantity", type: "SMALLINT", canBeNull: false, defaultValue: 1),
+    ],
+    "Products": [
+      AttributeForm(name: "productCode", type: "CHAR", size1: 20, isPK: true),
+      AttributeForm(name: "expireDate", type: "DATE", canBeNull: false, defaultValue: DateTime.now().add(const Duration(days: 30))),
+      AttributeForm(name: "amountInStock", type: "INTEGER", canBeNull: false),
+      AttributeForm(name: "productName", type: "VARCHAR", size1: 20, canBeNull: false),
+      AttributeForm(name: "productDescription", type: "VARCHAR", size1: 35, canBeNull: false),
+      AttributeForm(name: "productVendor", type: "VARCHAR", size1: 25),
+      AttributeForm(name: "purchasePrice", type: "FLOAT", canBeNull: false),
+      AttributeForm(name: "sellingPrice", type: "FLOAT", canBeNull: false),
+      AttributeForm(name: "MSRP", type: "FLOAT"),
+      AttributeForm(name: "productLine", type: "CHAR", size1: 10, tableFK: "ProductLine", nameFK: "productLine"),
+    ],
+    "ProductLine": [
+      AttributeForm(name: "productLine", type: "CHAR", size1: 10, isPK: true),
+      AttributeForm(name: "lineVendor", type: "VARCHAR", size1: 20),
+      AttributeForm(name: "lineCategory", type: "VARCHAR", size1: 20, canBeNull: false),
+      AttributeForm(name: "description", type: "VARCHAR", size1: 30),
+    ],
+  };
 
   Main.db = await openDatabase('my_db.db');
 
@@ -70,7 +132,7 @@ class HomePageState extends State<HomePage> {
 
 
   late double width, height;
-  String chosenTable = Main.tables[0];
+  String chosenTable = Main.tables.keys.first;
   String op = Main.ops[0];
 
   @override
@@ -159,7 +221,7 @@ class HomePageState extends State<HomePage> {
                 underline: Container(),
                 dropdownColor: Main.appTheme.scaffoldBackgroundColor,
                 value: chosenTable,
-                items: Main.tables.map<DropdownMenuItem<String>>((String value) {
+                items: Main.tables.keys.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem(
                     value: value,
                     child: Text(value, style: TextStyle(color: Main.appTheme.titleTextColor)),
