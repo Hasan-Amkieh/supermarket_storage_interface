@@ -5,3 +5,9 @@ An SQL DB for storing everything related to a supermarket, like products, employ
 This application is mainly intended for the CMPE341 final project for the team members Hasan Amkieh, Ozan Gultegin, Beyza Uludağ It provides the sufficient modifications needed for the project (CRUD operations)
 
 It uses SQflite package in Dart, which makes a local relational db that is stored inside the user's phone, this application is only supported for Android
+
+# About SQflite
+
+SQflite, the package that is used inside this as a DBMS, uses the package SQLite, it has some different syntax than the SQL language that we learned inside the CMPE341 labs
+
+So please refer to this link to look into the details of SQLite: https://www.sqlite.org/index.html

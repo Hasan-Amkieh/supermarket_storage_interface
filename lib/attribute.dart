@@ -17,10 +17,12 @@ class AttributeForm {
   bool canBeNull; // if it is FK or PK, then it is false
   dynamic defaultValue;
 
-  AttributeForm({required this.name, required this.type, this.size1 = -1, this.size2 = -1,
-    this.tableFK = "", this.nameFK = "", this.isPK = false, this.canBeNull = true, this.defaultValue}) {
+  String hintText;
 
-    if (isPK || tableFK.isNotEmpty) {
+  AttributeForm({required this.name, required this.type, this.size1 = -1, this.size2 = -1,
+    this.tableFK = "", this.nameFK = "", this.isPK = false, this.canBeNull = true, this.defaultValue, this.hintText = ""}) {
+
+    if (isPK) { // Because it can be null and it is causing exceptions
       canBeNull = false;
     }
 

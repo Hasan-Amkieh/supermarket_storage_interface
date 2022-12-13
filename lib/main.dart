@@ -33,27 +33,27 @@ void main() async {
 
   Main.tables = { // table into their attributes
     "Employee": [
-      AttributeForm(name: "employeeID", type: "CHAR", size1: 10, isPK: true),
+      AttributeForm(name: "employeeID", type: "INTEGER", isPK: true),
       AttributeForm(name: "firstName", type: "VARCHAR", size1: 20, canBeNull: false),
       AttributeForm(name: "lastName", type: "VARCHAR", size1: 20, canBeNull: false),
       AttributeForm(name: "jobTitle", type: "VARCHAR", size1: 20, canBeNull: false),
       AttributeForm(name: "email", type: "VARCHAR", size1: 25),
-      AttributeForm(name: "managerID", type: "CHAR", size1: 10, tableFK: "Employee", nameFK: "employeeID"),
+      AttributeForm(name: "managerID", type: "INTEGER", tableFK: "Employee", nameFK: "employeeID"),
       AttributeForm(name: "phoneNumber", type: "CHAR", size1: 11, canBeNull: false),
-      AttributeForm(name: "startDate", type: "DATE", canBeNull: false),
-      AttributeForm(name: "employeeOffice", type: "CHAR", size1: 3, tableFK: "Office", nameFK: "officeNumber"),
+      AttributeForm(name: "startDate", type: "DATE", canBeNull: false, defaultValue: "date()", hintText: "E.g 2019-12-21"),
+      AttributeForm(name: "employeeOffice", type: "NUMERIC", size1: 3, tableFK: "Office", nameFK: "officeNumber"),
     ],
     "Office": [
-      AttributeForm(name: "officeNumber", type: "CHAR", size1: 3, isPK: true),
+      AttributeForm(name: "officeNumber", type: "NUMERIC", size1: 3, isPK: true),
       AttributeForm(name: "officePhone", type: "CHAR", size1: 11),
-      AttributeForm(name: "officeManager", type: "CHAR", size1: 10, tableFK: "Employee", nameFK: "employeeID"),
+      AttributeForm(name: "officeManagerID", type: "INTEGER", tableFK: "Employee", nameFK: "employeeID"),
     ],
     "Department": [
-      AttributeForm(name: "depID", type: "CHAR", size1: 5, isPK: true),
+      AttributeForm(name: "depID", type: "SMALLINT", isPK: true),
       AttributeForm(name: "depName", type: "VARCHAR", size1: 20, canBeNull: false),
     ],
     "Customer": [
-      AttributeForm(name: "customerID", type: "CHAR", size1: 10, isPK: true),
+      AttributeForm(name: "customerID", type: "INTEGER", isPK: true),
       AttributeForm(name: "city", type: "VARCHAR", size1: 15),
       AttributeForm(name: "addressLine1", type: "VARCHAR", size1: 30),
       AttributeForm(name: "addressLine2", type: "VARCHAR", size1: 30),
@@ -61,23 +61,23 @@ void main() async {
       AttributeForm(name: "phoneNumber", type: "CHAR", size1: 11, canBeNull: false),
       AttributeForm(name: "state", type: "VARCHAR", size1: 15),
       AttributeForm(name: "postalCode", type: "INTEGER", canBeNull: false),
-      AttributeForm(name: "employeeID", type: "CHAR", size1: 10, tableFK: "Employee", nameFK: "employeeID"),
+      AttributeForm(name: "employeeID", type: "INTEGER", tableFK: "Employee", nameFK: "employeeID"),
     ],
     "Orders": [
-      AttributeForm(name: "orderTime", type: "TIMESTAMP", canBeNull: false),
-      AttributeForm(name: "orderNumber", type: "CHAR", size1: 20, isPK: true),
+      AttributeForm(name: "orderTime", type: "TIMESTAMP", canBeNull: false, defaultValue: "datetime()", hintText: "E.g 2019-12-21 09:30:55"),
+      AttributeForm(name: "orderNumber", type: "INTEGER", isPK: true),
       AttributeForm(name: "paymentMethod", type: "VARCHAR", size1: 15),
       AttributeForm(name: "total", type: "NUMERIC", size1: 10, size2: 2, canBeNull: false), // length of 10 with 2 decimals
-      AttributeForm(name: "customerID", type: "CHAR", size1: 10, tableFK: "Orders", nameFK: "customerID"),
+      AttributeForm(name: "customerID", type: "INTEGER", tableFK: "Orders", nameFK: "customerID"),
     ],
     "OrderDetail": [
-      AttributeForm(name: "orderNumber", type: "CHAR", size1: 20, tableFK: "Orders", nameFK: "orderNumber"),
-      AttributeForm(name: "productCode", type: "CHAR", size1: 20, tableFK: "Products", nameFK: "productCode"),
+      AttributeForm(name: "orderNumber", type: "INTEGER", tableFK: "Orders", nameFK: "orderNumber"),
+      AttributeForm(name: "productCode", type: "INTEGER", tableFK: "Products", nameFK: "productCode"),
       AttributeForm(name: "quantity", type: "SMALLINT", canBeNull: false, defaultValue: 1),
     ],
     "Products": [
-      AttributeForm(name: "productCode", type: "CHAR", size1: 20, isPK: true),
-      AttributeForm(name: "expireDate", type: "DATE", canBeNull: false, defaultValue: DateTime.now().add(const Duration(days: 30))),
+      AttributeForm(name: "productCode", type: "INTEGER", isPK: true),
+      AttributeForm(name: "expireDate", type: "DATE", canBeNull: false, defaultValue: "date('now', '+1 month')", hintText: "E.g 2019-12-21"),
       AttributeForm(name: "amountInStock", type: "INTEGER", canBeNull: false),
       AttributeForm(name: "productName", type: "VARCHAR", size1: 20, canBeNull: false),
       AttributeForm(name: "productDescription", type: "VARCHAR", size1: 35, canBeNull: false),
@@ -93,14 +93,70 @@ void main() async {
       AttributeForm(name: "lineCategory", type: "VARCHAR", size1: 20, canBeNull: false),
       AttributeForm(name: "description", type: "VARCHAR", size1: 30),
     ],
+    "works_for": [
+      AttributeForm(name: "depID", type: "SMALLINT", tableFK: "Department", nameFK: "depID"),
+      AttributeForm(name: "employeeID", type: "INTEGER", tableFK: "Employee", nameFK: "employeeID"),
+      AttributeForm(name: "startHour", type: "CHAR", size1: 2, canBeNull: false),
+      AttributeForm(name: "endHour", type: "CHAR", size1: 2, canBeNull: false),
+    ],
   };
 
   Main.db = await openDatabase('my_db.db');
+  bool isErr = true;
 
-  // await Main.db.execute(
-  //     'CREATE TABLE Test (id INTEGER PRIMARY KEY, name TEXT, value INTEGER, num REAL)');
+  try {
+    await Main.db.execute("CREATE TABLE Employee (id INTEGER PRIMARY KEY)");
+    await Main.db.execute("DROP TABLE Employee");
+    isErr = false;
+  } catch (err, stacktrace) {
+    if (!err.toString().contains("already exists")) {
+      print("ERROR: $err\n$stacktrace");
+    }
+  }
 
-  await Main.db.close();
+  if (!isErr) {
+    Main.tables.forEach((key, value) async {
+
+      String valsStr = "(";
+      value.forEach((element) {
+        if (valsStr[valsStr.length-1] != "(") {
+          valsStr += ', ';
+        }
+        valsStr += "${element.name} ";
+        switch(element.type) {
+          case "NUMERIC":
+            valsStr += "NUMERIC(${element.size1},${element.size2})";
+            break;
+          case "CHAR":
+            valsStr += "CHAR(${element.size1})";
+            break;
+          case "VARCHAR":
+            valsStr += "VARCHAR(${element.size1})";
+            break;
+          default:
+            valsStr += element.type;
+        }
+        valsStr += " ";
+        if (element.isPK) {
+          valsStr += "PRIMARY KEY";
+        }
+        valsStr += " ";
+        if (!element.canBeNull) {
+          valsStr += "NOT NULL";
+        }
+        valsStr += " ";
+        if (element.tableFK.isNotEmpty) {
+          valsStr += (" REFERENCES ${element.tableFK}(${element.nameFK})");
+        }
+        valsStr += " ";
+      });
+
+      // print("Executing ${'CREATE TABLE $key $valsStr)'}");
+      await Main.db.execute('CREATE TABLE $key $valsStr)');
+      valsStr = "";
+      // fks.clear();
+    });
+  }
 
   runApp(
       MaterialApp(
@@ -124,7 +180,7 @@ class HomePage extends StatefulWidget {
 
 }
 
-class HomePageState extends State<HomePage> {
+class HomePageState extends State<HomePage>  {
 
   int pageIndex = 0;
   int modOP = 0; // modOP 0 = Insert / 1 = Update / 2 = Delete / 3 = Read
@@ -135,8 +191,12 @@ class HomePageState extends State<HomePage> {
   String chosenTable = Main.tables.keys.first;
   String op = Main.ops[0];
 
+  List<TextEditingController> controllers = [];
+
   @override
   Widget build(BuildContext context) {
+
+    controllers.clear();
 
     width = (window.physicalSize / window.devicePixelRatio).width;
     height = (window.physicalSize / window.devicePixelRatio).height;
@@ -147,10 +207,89 @@ class HomePageState extends State<HomePage> {
 
       if (modOP == 0) { // Insert
 
-        subpage = Column(
-          children: [
+        Widget btn = TextButton.icon(
+          icon: const Icon(Icons.add),
+          label: const Text("Add"),
+          onPressed: () async {
 
-          ],
+            List<dynamic> attrs = [];
+            for (int i = 0 ; i < Main.tables[chosenTable]!.length ; i++) {
+              if (controllers[i].text.isEmpty) {
+                if (Main.tables[chosenTable]![i].defaultValue != null) {
+                  attrs.add(Main.tables[chosenTable]![i].defaultValue);
+                } else {
+                  attrs.add(null);
+                }
+                break;
+              }
+              if (Main.tables[chosenTable]![i].type.contains("INT") || Main.tables[chosenTable]![i].type.contains("NUMERIC")) {
+                attrs.add(int.parse(controllers[i].text));
+              } else {
+                attrs.add(controllers[i].text);
+              }
+            }
+            await Main.db.rawInsert("INSERT INTO Employee(employeeID, firstName, lastName, phoneNumber, email, jobTitle, startDate)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)", attrs);
+
+            // print("deleted employees count: ${(await Main.db.rawDelete("DELETE FROM Employee WHERE employeeID = ?", [1])).toString()}");
+            // print("employees count: ${(await Main.db.rawQuery("SELECT employeeID FROM Employee")).toString()}");
+            // await Main.db.rawInsert("INSERT INTO Employee(firstName, lastName, phoneNumber, email, jobTitle, startDate)"
+            //     " VALUES (?, ?, ?, ?, ?, ?)", ["Hasan", "Amkieh", "+8955456970", "hassan1551@outlook.com", "Programmer",
+            //   DateTime.now().day.toString() + "-" + DateTime.now().month.toString() + "-" + DateTime.now().year.toString()]);
+
+            // await Main.db.execute("DROP TABLE Employee");
+            // await Main.db.execute("DROP TABLE Office");
+            // await Main.db.execute("DROP TABLE Department");
+            // await Main.db.execute("DROP TABLE Customer");
+            // await Main.db.execute("DROP TABLE Orders");
+            // await Main.db.execute("DROP TABLE OrderDetail");
+            // await Main.db.execute("DROP TABLE Products");
+            // await Main.db.execute("DROP TABLE ProductLine");
+            // await Main.db.execute("DROP TABLE works_for");
+          },
+        );
+        List<Widget> list = [];
+
+        Main.tables[chosenTable]?.forEach((element) {
+
+          int maxLength = 100;
+          if (element.type.contains("CHAR") || element.type.contains("NUMERIC")) {
+            maxLength = element.size1;
+          } else if (element.type.contains("INTEGER")) {
+            maxLength = 10;
+          } else if (element.type.contains("SMALLINT")) {
+            maxLength = 6;
+          } else if (element.type.contains("TIMESTAMP")) {
+            maxLength = 19;
+          } else if (element.type.contains("DATE")) {
+            maxLength = 10;
+          }
+
+          controllers.add(TextEditingController());
+
+          list.add(SizedBox(height: height * 0.01));
+          list.add(
+              TextField(
+                controller: controllers[controllers.length - 1],
+                style: TextStyle(color: Colors.white),
+                maxLength: maxLength,
+                decoration: InputDecoration(
+                  counterStyle: TextStyle(color: Colors.white),
+                  border: OutlineInputBorder(),
+                  labelText: element.name,
+                  labelStyle: TextStyle(color: Colors.white),
+                  hintText: element.hintText.isNotEmpty ? element.hintText : 'Enter ${element.name}',
+                  hintStyle: TextStyle(color: Colors.white),
+                ),
+              )
+          );
+
+        });
+
+        list.add(btn);
+
+        subpage = Column(
+          children: list,
         );
 
       }
@@ -294,4 +433,14 @@ class HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  @override
+  void dispose() async {
+
+    await Main.db.close();
+
+    super.dispose();
+
+  }
+
 }
