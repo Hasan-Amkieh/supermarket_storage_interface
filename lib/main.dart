@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:oktoast/oktoast.dart';
 import 'dart:io' show Platform;
@@ -188,6 +189,9 @@ class HomePageState extends State<HomePage>  {
   int modOP = 0; // modOP 0 = Insert / 1 = Update / 2 = Delete // NOTE: Update is used for reading and updating
   int entity = 0;
 
+  AttributeForm chosenAttr = Main.tables["Employee"]![0];
+
+  TextEditingController searchController = TextEditingController();
 
   late double width, height;
   String chosenTable = Main.tables.keys.first;
@@ -197,6 +201,8 @@ class HomePageState extends State<HomePage>  {
 
   Map<String, int> updateID = {};
   List<dynamic> attrsToDisplay = [];
+
+  List<Map> searchListOriginal = [];
 
   @override
   Widget build(BuildContext context) {
@@ -702,12 +708,176 @@ class HomePageState extends State<HomePage>  {
     }
     else if (pageIndex == 1) {
 
-      page = Container();
+      page = Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Table: ", style: TextStyle(color: Main.appTheme.titleTextColor)),
+              DropdownButton<String>(
+                underline: Container(),
+                dropdownColor: Main.appTheme.scaffoldBackgroundColor,
+                value: chosenTable,
+                items: Main.tables.keys.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem(
+                    value: value,
+                    child: Text(value, style: TextStyle(color: Main.appTheme.titleTextColor)),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) async {
+                  chosenTable = newValue!;
+                  chosenAttr = Main.tables[chosenTable]![0];
+                  searchListOriginal = await Main.db.rawQuery("SELECT * FROM $chosenTable WHERE ${chosenAttr.name} = ?", [searchController.text]);
+                  setState(() {
+
+                  });
+                },
+              ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Attribute: ", style: TextStyle(color: Main.appTheme.titleTextColor)),
+              DropdownButton<AttributeForm>(
+                underline: Container(),
+                dropdownColor: Main.appTheme.scaffoldBackgroundColor,
+                value: chosenAttr,
+                items: Main.tables[chosenTable]!.map<DropdownMenuItem<AttributeForm>>((AttributeForm value) {
+                  return DropdownMenuItem(
+                    value: value,
+                    child: Text(value.name, style: TextStyle(color: Main.appTheme.titleTextColor)),
+                  );
+                }).toList(),
+                onChanged: (AttributeForm? newValue) async {
+                  chosenAttr = newValue!;
+                  searchListOriginal = await Main.db.rawQuery("SELECT * FROM $chosenTable WHERE ${chosenAttr.name} = ?", [searchController.text]);
+                  setState(() {
+                  }); //
+                },
+              ),
+            ],
+          ),
+          TextField(
+            controller: searchController,
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              counterStyle: TextStyle(color: Colors.white),
+              border: OutlineInputBorder(),
+              labelText: chosenAttr.name,
+              labelStyle: TextStyle(color: Colors.white),
+              hintText: chosenAttr.hintText.isNotEmpty ? chosenAttr.hintText : 'Enter ${chosenAttr.name}',
+              hintStyle: TextStyle(color: Colors.white),
+            ),
+            onChanged: (str) async {
+              searchListOriginal = await Main.db.rawQuery("SELECT * FROM $chosenTable WHERE ${chosenAttr.name} = ?", [searchController.text]);
+              print("The size of the search list is: ${searchListOriginal.length}");
+              setState(() {});
+            },
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: searchListOriginal.length,
+              itemBuilder: (context, index) => buildSearchResult(index),
+            ),
+          ),
+        ],
+      );
 
     }
     else { // then it should be 2, which is stats
 
-      page = Container();
+      double netWorth = 0.0;
+
+      page = ListView(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Inventory Worth", style: TextStyle(color: Colors.white, fontSize: 22)),
+              Text("${netWorth}K \$", style: TextStyle(color: Colors.green.shade700, fontSize: 26))
+            ],
+          ),
+          SizedBox(
+            height: height * 0.01,
+          ),
+          SizedBox(
+            width: width,
+            height: height * 0.8,
+            child: LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: 30,
+                minY: 0,
+                maxY: 30,
+                baselineX: 0.0,
+                baselineY: 0.0,
+                backgroundColor: Main.appTheme.scaffoldBackgroundColor.withRed(Main.appTheme.scaffoldBackgroundColor.red + 5),
+                gridData: FlGridData(
+                  show: true,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: const Color(0xff37434d),
+                      strokeWidth: 1
+                    );
+                  },
+                  drawVerticalLine: true,
+                  getDrawingVerticalLine: (value) {
+                    return FlLine(
+                        color: const Color(0xff37434d),
+                        strokeWidth: 1
+                    );
+                  },
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    isCurved: true,
+                    spots: [
+                      FlSpot(0, 4),
+                      FlSpot(4, 16),
+                      FlSpot(10, 5),
+                      FlSpot(20, 20),
+                    ],
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: Colors.blue.withOpacity(0.2),
+                    ),
+                  ),
+                ],
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                        reservedSize: 20,
+                        showTitles: false,
+                    ),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      reservedSize: 20,
+                      showTitles: false,
+                    ),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      reservedSize: 20,
+                      showTitles: false,
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      reservedSize: 20,
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        return Text('${value.toInt()}K', style: TextStyle(fontSize: 10, color: Colors.white));
+                      }
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
 
     }
 
@@ -724,8 +894,9 @@ class HomePageState extends State<HomePage>  {
           height: Platform.isWindows ? (height * 0.08) : (height * 0.08),
           labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
           selectedIndex: pageIndex,
-          onDestinationSelected: (int newIndex) {
+          onDestinationSelected: (int newIndex) async {
             setState(() {
+              chosenAttr = Main.tables[chosenTable]![0];
               pageIndex = newIndex;
             });
           },
@@ -743,6 +914,29 @@ class HomePageState extends State<HomePage>  {
         ),
       ),
     );
+  }
+
+  ListTile buildSearchResult(int index) {
+
+    ListTile tile = ListTile();
+
+    switch (chosenTable) {
+
+      case "Employee":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["employeeID"]} - " + searchListOriginal[index]["firstName"] + " " + searchListOriginal[index]["lastName"], style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            '${searchListOriginal[index]["phoneNumber"]} - ${searchListOriginal[index]["email"]}\n${searchListOriginal[index]["jobTitle"]}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+
+    }
+
+    return tile;
+
   }
 
   @override
