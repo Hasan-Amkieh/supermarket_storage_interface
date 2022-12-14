@@ -534,10 +534,95 @@ class HomePageState extends State<HomePage>  {
       }
       else if (modOP == 2) { // Delete
 
-        subpage = Column(
-          children: [
+        Map deleteID = {};
+        List<Widget> list = [];
 
-          ],
+        btn = TextButton.icon(
+          icon: const Icon(Icons.delete_forever, color: Colors.red),
+          label: const Text("Delete", style: TextStyle(color: Colors.red)),
+          style: ButtonStyle(
+              overlayColor: MaterialStateProperty.all(Colors.red.withOpacity(0.2)),
+          ),
+          onPressed: () async {
+            int count = 0;
+            for (int i = 0; i < Main.tables[chosenTable]!.length ; i++) {
+              var element = Main.tables[chosenTable]![i];
+              if (controllers[count].text.isNotEmpty) {
+                if (element.type.contains("NUMERIC") || element.type.contains("INT")) {
+                  deleteID.addEntries([
+                    MapEntry(element.name, int.parse(controllers[count].text))
+                  ]);
+                } else {
+                  deleteID.addEntries([
+                    MapEntry(element.name, controllers[count].text)
+                  ]);
+                }
+              }
+              count++;
+            }
+
+            String rules = "";
+            List<dynamic> vals = deleteID.values.toList();
+            deleteID.forEach((key, value) {
+              rules += "$key = ? AND ";
+            });
+            rules = rules.substring(0, rules.length - 4);
+
+            try {
+              int count = await Main.db.rawDelete("DELETE FROM $chosenTable WHERE $rules", vals);
+              showToast(
+                "$count were deleted",
+                duration: const Duration(milliseconds: 1500),
+                position: ToastPosition.bottom,
+                backgroundColor: Colors.blue.withOpacity(0.8),
+                radius: 100.0,
+                textStyle: const TextStyle(fontSize: 12.0, color: Colors.white),
+              );
+            } catch(err, stacktrace) {
+              print("$err\n$stacktrace");
+            }
+          },
+        );
+
+        for (int j = 0 ; j < Main.tables[chosenTable]!.length ; j++) {
+          var element = Main.tables[chosenTable]![j];
+
+          int maxLength = 100;
+          if (element.type.contains("CHAR") || element.type.contains("NUMERIC")) {
+            maxLength = element.size1;
+          } else if (element.type.contains("INTEGER")) {
+            maxLength = 10;
+          } else if (element.type.contains("SMALLINT")) {
+            maxLength = 6;
+          } else if (element.type.contains("TIMESTAMP")) {
+            maxLength = 19;
+          } else if (element.type.contains("DATE")) {
+            maxLength = 10;
+          }
+
+          controllers.add(TextEditingController());
+
+          list.add(SizedBox(height: height * 0.01));
+          list.add(
+              TextField(
+                controller: controllers[controllers.length - 1],
+                style: TextStyle(color: Colors.white),
+                maxLength: maxLength,
+                decoration: InputDecoration(
+                  counterStyle: TextStyle(color: Colors.white),
+                  border: OutlineInputBorder(),
+                  labelText: element.name,
+                  labelStyle: TextStyle(color: Colors.white),
+                  hintText: element.hintText.isNotEmpty ? element.hintText : 'Enter ${element.name}',
+                  hintStyle: TextStyle(color: Colors.white),
+                ),
+              )
+          );
+
+        }
+
+        subpage = ListView(
+          children: list,
         );
 
       }
