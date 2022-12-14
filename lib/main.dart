@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:oktoast/oktoast.dart';
 import 'dart:io' show Platform;
 
 import 'package:sqflite/sqflite.dart';
@@ -22,7 +23,6 @@ class Main {
     "Insert",
     "Update",
     "Delete",
-    "Read",
   ];
 
 }
@@ -159,14 +159,16 @@ void main() async {
   }
 
   runApp(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Supermarket Storage Interface',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-        ),
-        home: const HomePage(title: 'Supermarket Storage Interface'),
-    )
+      OKToast(
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Supermarket Storage Interface',
+          theme: ThemeData(
+            primarySwatch: Colors.blue,
+          ),
+          home: const HomePage(title: 'Supermarket Storage Interface'),
+    ),
+      )
   );
 }
 
@@ -183,7 +185,7 @@ class HomePage extends StatefulWidget {
 class HomePageState extends State<HomePage>  {
 
   int pageIndex = 0;
-  int modOP = 0; // modOP 0 = Insert / 1 = Update / 2 = Delete / 3 = Read
+  int modOP = 0; // modOP 0 = Insert / 1 = Update / 2 = Delete // NOTE: Update is used for reading and updating
   int entity = 0;
 
 
@@ -193,61 +195,25 @@ class HomePageState extends State<HomePage>  {
 
   List<TextEditingController> controllers = [];
 
+  Map<String, int> updateID = {};
+  List<dynamic> attrsToDisplay = [];
+
   @override
   Widget build(BuildContext context) {
 
     controllers.clear();
 
+    Widget btn = Container();
+
     width = (window.physicalSize / window.devicePixelRatio).width;
     height = (window.physicalSize / window.devicePixelRatio).height;
 
-    Widget page, subpage;
+    Widget page = Container(), subpage = Container();
 
     if (pageIndex == 0) {
 
       if (modOP == 0) { // Insert
 
-        Widget btn = TextButton.icon(
-          icon: const Icon(Icons.add),
-          label: const Text("Add"),
-          onPressed: () async {
-
-            List<dynamic> attrs = [];
-            for (int i = 0 ; i < Main.tables[chosenTable]!.length ; i++) {
-              if (controllers[i].text.isEmpty) {
-                if (Main.tables[chosenTable]![i].defaultValue != null) {
-                  attrs.add(Main.tables[chosenTable]![i].defaultValue);
-                } else {
-                  attrs.add(null);
-                }
-                break;
-              }
-              if (Main.tables[chosenTable]![i].type.contains("INT") || Main.tables[chosenTable]![i].type.contains("NUMERIC")) {
-                attrs.add(int.parse(controllers[i].text));
-              } else {
-                attrs.add(controllers[i].text);
-              }
-            }
-            await Main.db.rawInsert("INSERT INTO Employee(employeeID, firstName, lastName, phoneNumber, email, jobTitle, startDate)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)", attrs);
-
-            // print("deleted employees count: ${(await Main.db.rawDelete("DELETE FROM Employee WHERE employeeID = ?", [1])).toString()}");
-            // print("employees count: ${(await Main.db.rawQuery("SELECT employeeID FROM Employee")).toString()}");
-            // await Main.db.rawInsert("INSERT INTO Employee(firstName, lastName, phoneNumber, email, jobTitle, startDate)"
-            //     " VALUES (?, ?, ?, ?, ?, ?)", ["Hasan", "Amkieh", "+8955456970", "hassan1551@outlook.com", "Programmer",
-            //   DateTime.now().day.toString() + "-" + DateTime.now().month.toString() + "-" + DateTime.now().year.toString()]);
-
-            // await Main.db.execute("DROP TABLE Employee");
-            // await Main.db.execute("DROP TABLE Office");
-            // await Main.db.execute("DROP TABLE Department");
-            // await Main.db.execute("DROP TABLE Customer");
-            // await Main.db.execute("DROP TABLE Orders");
-            // await Main.db.execute("DROP TABLE OrderDetail");
-            // await Main.db.execute("DROP TABLE Products");
-            // await Main.db.execute("DROP TABLE ProductLine");
-            // await Main.db.execute("DROP TABLE works_for");
-          },
-        );
         List<Widget> list = [];
 
         Main.tables[chosenTable]?.forEach((element) {
@@ -286,19 +252,283 @@ class HomePageState extends State<HomePage>  {
 
         });
 
-        list.add(btn);
+        btn = TextButton.icon(
+          icon: const Icon(Icons.add),
+          label: const Text("Add"),
+          onPressed: () async {
 
-        subpage = Column(
+            // print((await Main.db.rawQuery("SELECT * FROM Employee")).toString());
+            // return;
+
+            List<dynamic> attrs = [];
+            String vars = "";
+            for (int i = 0 ; i < Main.tables[chosenTable]!.length ; i++) {
+              // print("Text: ${controllers[i].text}");
+              if (controllers[i].text.isEmpty) {
+                if (Main.tables[chosenTable]![i].defaultValue != null) {
+                  attrs.add(Main.tables[chosenTable]![i].defaultValue);
+                  vars += "${Main.tables[chosenTable]![i].name}, ";
+                }
+                continue;
+              }
+              if (Main.tables[chosenTable]![i].type.contains("INT") || Main.tables[chosenTable]![i].type.contains("NUMERIC")) {
+                attrs.add(int.parse(controllers[i].text));
+              } else {
+                attrs.add(controllers[i].text);
+              }
+              vars += "${Main.tables[chosenTable]![i].name}, ";
+            }
+            // print("attrs: $attrs");
+            vars = vars.substring(0, vars.length - 2);
+            String marks = "";
+            for (int i = 0 ; i < attrs.length ; i++) {
+              marks += "?, ";
+            }
+            marks = marks.substring(0, marks.length - 2);
+            print("PERFORMING: INSERT INTO Employee($vars) VALUES ($attrs)");
+
+            try {
+              await Main.db.rawInsert("INSERT INTO $chosenTable($vars)"
+                  " VALUES ($marks)", attrs);
+              showToast(
+                "Added successfully",
+                duration: const Duration(milliseconds: 1500),
+                position: ToastPosition.bottom,
+                backgroundColor: Colors.blue.withOpacity(0.8),
+                radius: 100.0,
+                textStyle: const TextStyle(fontSize: 12.0, color: Colors.white),
+              );
+            } catch (err, stacktrace) {
+              print("ERROR: $err\n$stacktrace");
+              showToast(
+                "ERROR: " + err.toString().substring(err.toString().indexOf("DatabaseException") + 18, err.toString().indexOf("(", err.toString().indexOf("DatabaseException") + 20)),
+                duration: const Duration(milliseconds: 5000),
+                position: ToastPosition.bottom,
+                backgroundColor: Colors.red.withOpacity(0.8),
+                radius: 100.0,
+                textStyle: const TextStyle(fontSize: 12.0, color: Colors.white),
+              );
+            }
+
+            // print("deleted employees count: ${(await Main.db.rawDelete("DELETE FROM Employee WHERE employeeID = ?", [1])).toString()}");
+            // print("employees count: ${(await Main.db.rawQuery("SELECT employeeID FROM Employee")).toString()}");
+            // await Main.db.rawInsert("INSERT INTO Employee(firstName, lastName, phoneNumber, email, jobTitle, startDate)"
+            //     " VALUES (?, ?, ?, ?, ?, ?)", ["Hasan", "Amkieh", "+8955456970", "hassan1551@outlook.com", "Programmer",
+            //   DateTime.now().day.toString() + "-" + DateTime.now().month.toString() + "-" + DateTime.now().year.toString()]);
+
+            // await Main.db.execute("DROP TABLE Employee");
+            // await Main.db.execute("DROP TABLE Office");
+            // await Main.db.execute("DROP TABLE Department");
+            // await Main.db.execute("DROP TABLE Customer");
+            // await Main.db.execute("DROP TABLE Orders");
+            // await Main.db.execute("DROP TABLE OrderDetail");
+            // await Main.db.execute("DROP TABLE Products");
+            // await Main.db.execute("DROP TABLE ProductLine");
+            // await Main.db.execute("DROP TABLE works_for");
+          },
+        );
+
+        // list
+        subpage = ListView(
           children: list,
         );
 
       }
       else if (modOP == 1) { // Update
 
-        subpage = Column(
-          children: [
+        List<Widget> list = [];
 
-          ],
+        if (attrsToDisplay.isEmpty) {
+
+          btn = TextButton.icon(
+            icon: const Icon(Icons.download_rounded),
+            label: const Text("Get Info"),
+            onPressed: () async {
+
+              int count = 0;
+              for (int i = 0 ; i < Main.tables[chosenTable]!.length ; i++) {
+                var element = Main.tables[chosenTable]![i];
+                if (!element.isPK && element.tableFK.isEmpty) {
+                  continue;
+                }
+                if (controllers[count].text.isNotEmpty) {
+                  updateID.addEntries([MapEntry(element.name, int.parse(controllers[count].text))]);
+                }
+                count++;
+              }
+
+              String rules = "";
+              List<dynamic> vals = updateID.values.toList();
+              updateID.forEach((key, value) {
+                rules += "$key = ? AND ";
+              });
+              rules = rules.substring(0, rules.length - 4);
+              attrsToDisplay =
+              await Main.db.rawQuery("SELECT * FROM $chosenTable WHERE $rules", vals);
+              setState(() {
+                if (attrsToDisplay.isNotEmpty) {
+                  print("received: $attrsToDisplay");
+                } else {
+                  showToast(
+                    "No results found",
+                    duration: const Duration(milliseconds: 1500),
+                    position: ToastPosition.bottom,
+                    backgroundColor: Colors.red.withOpacity(0.8),
+                    radius: 100.0,
+                    textStyle: const TextStyle(fontSize: 12.0, color: Colors.white),
+                  );
+                }
+              });
+
+            },
+          );
+
+          for (int j = 0 ; j < Main.tables[chosenTable]!.length ; j++) {
+            var element = Main.tables[chosenTable]![j];
+            if (!element.isPK && element.tableFK.isEmpty) {
+              // print("${element.name} is dismissed");
+              continue;
+            }
+
+            int maxLength = 100;
+            if (element.type.contains("CHAR") || element.type.contains("NUMERIC")) {
+              maxLength = element.size1;
+            } else if (element.type.contains("INTEGER")) {
+              maxLength = 10;
+            } else if (element.type.contains("SMALLINT")) {
+              maxLength = 6;
+            } else if (element.type.contains("TIMESTAMP")) {
+              maxLength = 19;
+            } else if (element.type.contains("DATE")) {
+              maxLength = 10;
+            }
+
+            controllers.add(TextEditingController());
+
+            list.add(SizedBox(height: height * 0.01));
+            list.add(
+                TextField(
+                  controller: controllers[controllers.length - 1],
+                  style: TextStyle(color: Colors.white),
+                  maxLength: maxLength,
+                  decoration: InputDecoration(
+                    counterStyle: TextStyle(color: Colors.white),
+                    border: OutlineInputBorder(),
+                    labelText: element.name,
+                    labelStyle: TextStyle(color: Colors.white),
+                    hintText: element.hintText.isNotEmpty ? element.hintText : 'Enter ${element.name}',
+                    hintStyle: TextStyle(color: Colors.white),
+                  ),
+                )
+            );
+
+          }
+
+        } else { // update data:
+
+          btn = TextButton.icon(
+            icon: const Icon(Icons.upload_rounded),
+            label: const Text("Update"),
+            onPressed: () async {
+
+              List<dynamic> attrs = [];
+              String vars = "";
+              for (int i = 0 ; i < Main.tables[chosenTable]!.length ; i++) {
+                // print("Text: ${controllers[i].text}");
+                if (controllers[i].text.isEmpty) {
+                  if (Main.tables[chosenTable]![i].defaultValue != null) {
+                    attrs.add(Main.tables[chosenTable]![i].defaultValue);
+                    vars += "${Main.tables[chosenTable]![i].name}, ";
+                  }
+                  continue;
+                }
+                if (Main.tables[chosenTable]![i].type.contains("INT") || Main.tables[chosenTable]![i].type.contains("NUMERIC")) {
+                  attrs.add(int.parse(controllers[i].text));
+                } else {
+                  attrs.add(controllers[i].text);
+                }
+                vars += "${Main.tables[chosenTable]![i].name} = ?, ";
+              }
+              // print("attrs: $attrs");
+              vars = vars.substring(0, vars.length - 2);
+
+              attrs.addAll(updateID.values.toList());
+
+              String rules = "";
+              updateID.forEach((key, value) {
+                rules += "$key = ? AND ";
+              });
+              rules = rules.substring(0, rules.length - 4);
+
+              try {
+
+                await Main.db.rawInsert("UPDATE $chosenTable SET $vars WHERE $rules", attrs);
+                showToast(
+                  "Added successfully",
+                  duration: const Duration(milliseconds: 1500),
+                  position: ToastPosition.bottom,
+                  backgroundColor: Colors.blue.withOpacity(0.8),
+                  radius: 100.0,
+                  textStyle: const TextStyle(fontSize: 12.0, color: Colors.white),
+                );
+              } catch (err, stacktrace) {
+                print("ERROR: $err\n$stacktrace");
+                showToast(
+                  "ERROR: " + err.toString().substring(err.toString().indexOf("DatabaseException") + 18, err.toString().indexOf("(", err.toString().indexOf("DatabaseException") + 20)),
+                  duration: const Duration(milliseconds: 5000),
+                  position: ToastPosition.bottom,
+                  backgroundColor: Colors.red.withOpacity(0.8),
+                  radius: 100.0,
+                  textStyle: const TextStyle(fontSize: 12.0, color: Colors.white),
+                );
+              }
+              setState(() {attrsToDisplay = [];updateID.clear();});
+            },
+          );
+          int count = 0;
+          Main.tables[chosenTable]?.forEach((element) {
+
+            int maxLength = 100;
+            if (element.type.contains("CHAR") || element.type.contains("NUMERIC")) {
+              maxLength = element.size1;
+            } else if (element.type.contains("INTEGER")) {
+              maxLength = 10;
+            } else if (element.type.contains("SMALLINT")) {
+              maxLength = 6;
+            } else if (element.type.contains("TIMESTAMP")) {
+              maxLength = 19;
+            } else if (element.type.contains("DATE")) {
+              maxLength = 10;
+            }
+
+            String data = (attrsToDisplay[0]as Map).values.toList()[count].toString();
+            controllers.add(TextEditingController(text: data));
+
+            list.add(SizedBox(height: height * 0.01));
+            list.add(
+                TextField(
+                  controller: controllers[controllers.length - 1],
+                  style: TextStyle(color: Colors.white),
+                  maxLength: maxLength,
+                  decoration: InputDecoration(
+                    counterStyle: TextStyle(color: Colors.white),
+                    border: OutlineInputBorder(),
+                    labelText: element.name,
+                    labelStyle: TextStyle(color: Colors.white),
+                    hintText: element.hintText.isNotEmpty ? element.hintText : 'Enter ${element.name}',
+                    hintStyle: TextStyle(color: Colors.white),
+                  ),
+                )
+            );
+
+            count++;
+
+          });
+
+        }
+
+        subpage = ListView(
+          children: list,
         );
 
       }
@@ -310,8 +540,6 @@ class HomePageState extends State<HomePage>  {
           ],
         );
 
-      } else { // Read
-        subpage = Container();
       }
 
       page = Column(
@@ -332,6 +560,7 @@ class HomePageState extends State<HomePage>  {
                 }).toList(),
                 onChanged: (String? newValue) {
                   setState(() {
+                    attrsToDisplay = [];updateID.clear();
                     op = newValue!;
                     switch (op) {
                       case "Insert":
@@ -342,9 +571,6 @@ class HomePageState extends State<HomePage>  {
                         break;
                       case "Delete":
                         modOP = 2;
-                        break;
-                      case "Read":
-                        modOP = 3;
                         break;
                     }
                   }); //
@@ -368,6 +594,7 @@ class HomePageState extends State<HomePage>  {
                 }).toList(),
                 onChanged: (String? newValue) {
                   setState(() {
+                    attrsToDisplay.clear();updateID.clear();
                     chosenTable = newValue!;
                     switch (chosenTable) {
                       case "Employee":
@@ -382,7 +609,8 @@ class HomePageState extends State<HomePage>  {
               ),
             ],
           ),
-          subpage,
+          Expanded(child: subpage),
+          btn,
         ],
       );
 
@@ -426,9 +654,7 @@ class HomePageState extends State<HomePage>  {
       body: SafeArea(
         child: Container(
           padding: EdgeInsets.all(width * 0.04),
-          child: SingleChildScrollView(
-              child: page,
-          ),
+          child: page,
         ),
       ),
     );
