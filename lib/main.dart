@@ -41,7 +41,7 @@ void main() async {
       AttributeForm(name: "email", type: "VARCHAR", size1: 25),
       AttributeForm(name: "managerID", type: "INTEGER", tableFK: "Employee", nameFK: "employeeID"),
       AttributeForm(name: "phoneNumber", type: "CHAR", size1: 11, canBeNull: false),
-      AttributeForm(name: "startDate", type: "DATE", canBeNull: false, defaultValue: "date()", hintText: "E.g 2019-12-21"),
+      AttributeForm(name: "startDate", type: "DATE", canBeNull: false, defaultValue: "SELECT date()", hintText: "E.g 2019-12-21"),
       AttributeForm(name: "employeeOffice", type: "NUMERIC", size1: 3, tableFK: "Office", nameFK: "officeNumber"),
     ],
     "Office": [
@@ -65,11 +65,11 @@ void main() async {
       AttributeForm(name: "employeeID", type: "INTEGER", tableFK: "Employee", nameFK: "employeeID"),
     ],
     "Orders": [
-      AttributeForm(name: "orderTime", type: "TIMESTAMP", canBeNull: false, defaultValue: "datetime()", hintText: "E.g 2019-12-21 09:30:55"),
+      AttributeForm(name: "orderTime", type: "TIMESTAMP", canBeNull: false, defaultValue: "SELECT datetime()", hintText: "E.g 2019-12-21 09:30:55"),
       AttributeForm(name: "orderNumber", type: "INTEGER", isPK: true),
       AttributeForm(name: "paymentMethod", type: "VARCHAR", size1: 15),
       AttributeForm(name: "total", type: "NUMERIC", size1: 10, size2: 2, canBeNull: false), // length of 10 with 2 decimals
-      AttributeForm(name: "customerID", type: "INTEGER", tableFK: "Orders", nameFK: "customerID"),
+      AttributeForm(name: "customerID", type: "INTEGER", tableFK: "Customer", nameFK: "customerID"),
     ],
     "OrderDetail": [
       AttributeForm(name: "orderNumber", type: "INTEGER", tableFK: "Orders", nameFK: "orderNumber"),
@@ -78,7 +78,7 @@ void main() async {
     ],
     "Products": [
       AttributeForm(name: "productCode", type: "INTEGER", isPK: true),
-      AttributeForm(name: "expireDate", type: "DATE", canBeNull: false, defaultValue: "date('now', '+1 month')", hintText: "E.g 2019-12-21"),
+      AttributeForm(name: "expireDate", type: "DATE", canBeNull: false, defaultValue: "SELECT date('now', '+1 month')", hintText: "E.g 2019-12-21"),
       AttributeForm(name: "amountInStock", type: "INTEGER", canBeNull: false),
       AttributeForm(name: "productName", type: "VARCHAR", size1: 20, canBeNull: false),
       AttributeForm(name: "productDescription", type: "VARCHAR", size1: 35, canBeNull: false),
@@ -102,7 +102,7 @@ void main() async {
     ],
   };
 
-  Main.db = await openDatabase('my_db.db');
+  Main.db = await openDatabase('my_db1.db');
   bool isErr = true;
 
   try {
@@ -272,7 +272,13 @@ class HomePageState extends State<HomePage>  {
               // print("Text: ${controllers[i].text}");
               if (controllers[i].text.isEmpty) {
                 if (Main.tables[chosenTable]![i].defaultValue != null) {
-                  attrs.add(Main.tables[chosenTable]![i].defaultValue);
+                  if (Main.tables[chosenTable]![i].defaultValue.toString().contains("date")) {
+                    String str = (await Main.db.rawQuery("${Main.tables[chosenTable]![i].defaultValue}"))[0].values.toList()[0].toString();
+                    print("Date of $str");
+                    attrs.add(str);
+                  } else {
+                    attrs.add(Main.tables[chosenTable]![i].defaultValue);
+                  }
                   vars += "${Main.tables[chosenTable]![i].name}, ";
                 }
                 continue;
@@ -344,7 +350,7 @@ class HomePageState extends State<HomePage>  {
 
         List<Widget> list = [];
 
-        if (attrsToDisplay.isEmpty) {
+        if (attrsToDisplay.isEmpty) { // Getting the data
 
           btn = TextButton.icon(
             icon: const Icon(Icons.download_rounded),
@@ -507,8 +513,8 @@ class HomePageState extends State<HomePage>  {
               maxLength = 10;
             }
 
-            String data = (attrsToDisplay[0]as Map).values.toList()[count].toString();
-            controllers.add(TextEditingController(text: data));
+            String data = (attrsToDisplay[0] as Map).values.toList()[count].toString();
+            controllers.add(TextEditingController(text: data == "null" ? "" : data));
 
             list.add(SizedBox(height: height * 0.01));
             list.add(
@@ -932,7 +938,102 @@ class HomePageState extends State<HomePage>  {
           ),
         );
         break;
-
+      case "Department":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["depID"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            '${searchListOriginal[index]["depName"]}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+      case "Office":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["officeNumber"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            '${searchListOriginal[index]["officePhone"]}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+      case "Customer":
+        /*AttributeForm(name: "city", type: "VARCHAR", size1: 15),
+      AttributeForm(name: "addressLine1", type: "VARCHAR", size1: 30),
+      AttributeForm(name: "addressLine2", type: "VARCHAR", size1: 30),
+      AttributeForm(name: "customerName", type: "VARCHAR", size1: 25, canBeNull: false),
+      AttributeForm(name: "phoneNumber", type: "CHAR", size1: 11, canBeNull: false),
+      AttributeForm(name: "state", type: "VARCHAR", size1: 15),
+      AttributeForm(name: "postalCode", type: "INTEGER", canBeNull: false),
+      AttributeForm(name: "employeeID", type: "INTEGER", tableFK: "Employee", nameFK: "employeeID"),*/
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["customerID"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+                '${searchListOriginal[index]["customerName"]}\n${searchListOriginal[index]["phoneNumber"]}'
+                '${searchListOriginal[index]["state"]} ${searchListOriginal[index]["city"]}, ${searchListOriginal[index]["addressLine1"]} ${searchListOriginal[index]["addressLine2"]}'
+                '${searchListOriginal[index]["postalCode"]}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+      case "Orders":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["orderNumber"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            '${searchListOriginal[index]["orderTime"]} - ${searchListOriginal[index]["paymentMethod"]}\n${searchListOriginal[index]["total"]} \$',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+      case "OrderDetail":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("order No. ${searchListOriginal[index]["orderNumber"]} - Product No. ${searchListOriginal[index]["productCode"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            '${searchListOriginal[index]["quantity"]} units',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+      case "Products":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["productCode"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+                '${searchListOriginal[index]["productName"]}\n${searchListOriginal[index]["productDescription"]}'
+                'Expires at ${searchListOriginal[index]["expireDate"]} with an amount of ${searchListOriginal[index]["amountInStock"]}'
+                '${searchListOriginal[index]["productVendor"]}'
+                'Bought at ${searchListOriginal[index]["purchasePrice"]} - Sold at ${searchListOriginal[index]["sellingPrice"]}'
+                'Brought from ${searchListOriginal[index]["productLine"]}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+      case "ProductLine":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["productLine"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            '${searchListOriginal[index]["productName"]}\n${searchListOriginal[index]["productDescription"]}'
+                '${searchListOriginal[index]["lineVendor"]} - ${searchListOriginal[index]["lineCategory"]}'
+                '${searchListOriginal[index]["description"]}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
+      case "works_for":
+        tile = ListTile(
+          contentPadding: EdgeInsets.fromLTRB(width * 0.03, height * 0.005, width * 0.03, height * 0.005),
+          title: Text("${searchListOriginal[index]["employeeID"]} works in ${searchListOriginal[index]["depID"]}", style: TextStyle(color: Colors.white)),
+          subtitle: Text(
+            'works from ${searchListOriginal[index]["startHour"]} until ${searchListOriginal[index]["endHour"]}',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+        break;
     }
 
     return tile;
