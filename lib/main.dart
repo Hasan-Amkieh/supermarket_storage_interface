@@ -449,8 +449,15 @@ class HomePageState extends State<HomePage>  {
                 // print("Text: ${controllers[i].text}");
                 if (controllers[i].text.isEmpty) {
                   if (Main.tables[chosenTable]![i].defaultValue != null) {
-                    attrs.add(Main.tables[chosenTable]![i].defaultValue);
-                    vars += "${Main.tables[chosenTable]![i].name}, ";
+                    // attrs.add(Main.tables[chosenTable]![i].defaultValue);
+                    if (Main.tables[chosenTable]![i].defaultValue.toString().contains("date")) {
+                      String str = (await Main.db.rawQuery("${Main.tables[chosenTable]![i].defaultValue}"))[0].values.toList()[0].toString();
+                      // print("Date of $str");
+                      attrs.add(str);
+                    } else {
+                      attrs.add(Main.tables[chosenTable]![i].defaultValue);
+                    }
+                    vars += "${Main.tables[chosenTable]![i].name} = ?, ";
                   }
                   continue;
                 }
@@ -461,8 +468,9 @@ class HomePageState extends State<HomePage>  {
                 }
                 vars += "${Main.tables[chosenTable]![i].name} = ?, ";
               }
-              // print("attrs: $attrs");
+              print("attrs: $vars");
               vars = vars.substring(0, vars.length - 2);
+              print("attrs: $vars");
 
               attrs.addAll(updateID.values.toList());
 
@@ -909,7 +917,7 @@ class HomePageState extends State<HomePage>  {
           destinations: [
             NavigationDestination(icon: Icon(Icons.mode_edit_outline, color: Main.appTheme.navIconColor), selectedIcon: Icon(Icons.mode_edit, color: Main.appTheme.navIconColor), label: 'Modify'),
             NavigationDestination(icon: Icon(Icons.search_outlined, color: Main.appTheme.navIconColor), selectedIcon: Icon(Icons.search, color: Main.appTheme.navIconColor), label: 'Search'),
-            NavigationDestination(icon: Icon(Icons.query_stats_outlined, color: Main.appTheme.navIconColor), selectedIcon: Icon(Icons.query_stats, color: Main.appTheme.navIconColor), label: 'Stats'),
+            // NavigationDestination(icon: Icon(Icons.query_stats_outlined, color: Main.appTheme.navIconColor), selectedIcon: Icon(Icons.query_stats, color: Main.appTheme.navIconColor), label: 'Stats'),
           ],
         ),
       ),
